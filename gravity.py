@@ -1,4 +1,7 @@
-#2D gravity simulator
+###############################
+###### 2D gravity simulator ########
+######### press SPACE ###########
+################################
 
 import numpy as np
 import random, string, math, time 
@@ -9,6 +12,9 @@ import os, sys
 
 pygame.init()
 FPS = 60
+infoObject = pygame.display.Info()
+tempresx = infoObject.current_w
+tempresy = infoObject.current_h
 res = [1920, 1080]
 fpsClock = pygame.time.Clock()
 screen = pygame.display.set_mode(res, RESIZABLE)
@@ -16,8 +22,10 @@ white = (255, 255, 255)
 black = (0,0,0)
 objects = []
 font = pygame.font.Font(None, 36)
-
-
+img = ["images/earth.png","neptune.png"]
+earthimg = pygame.image.load(img[0]).convert_alpha()
+resx_ratio = res[0]/tempresx
+resy_ratio = res[1]/tempresy
 
 #random name gen, src:"http://pythonfiddle.com/random-word-generator/"
 vowels = list('aeiou')
@@ -49,17 +57,21 @@ def newName():
 	for i in range(0, 10):
 		return gen_word(2,4)
 
+#actual engine starts here
 def drawCircle(pos, radius, color, name):
 	pos = (int(pos[0]),int(pos[1]))
-	pygame.draw.circle(screen, color, pos, radius)
+	circle = pygame.draw.circle(screen, color, pos, radius)
 	text = font.render(name, 25, (255, 255, 255))
 	text_rect = text.get_rect(center=(pos))
-	screen.blit(text,text_rect)
+	#screen.blit(text,text_rect)
+	#disp_earth = pygame.transform.scale(earthimg, (int(radius*2.7), int(radius*2.7)))
+	#earth_rect = disp_earth.get_rect(center=pos)
+	#screen.blit(disp_earth, earth_rect)
 
 def newObject(pos, radius):
 	name = newName()
 	color = (random.randrange(0, 255),random.randrange(0, 255),random.randrange(0, 255))
-	velocity = [1,0]
+	velocity = [0,0]
 	global objects
 	props = [pos, radius, name, color, velocity]
 	objects.append(props)
@@ -101,6 +113,21 @@ def Collision(o1, o2, distancevector, mass1, mass2):
 		return True
 	else:
 		return False
+def Box():
+	global objects
+	i = 0
+	while i < len(objects):
+		objects[i][0] = list(tuple(map(add, objects[i][0], objects[i][4])))
+		drawCircle(objects[i][0],objects[i][1],objects[i][3],objects[i][2])
+		radboxw = [int(objects[i][0][0]-objects[i][1]), int(objects[i][0][0]+objects[i][1])]
+		radboxh = [int(objects[i][0][1]-objects[i][1]), int(objects[i][0][1]+objects[i][1])]
+		for x in range(radboxw[0],radboxw[1]): 
+			if x not in range(res[0]):
+				objects[i][4][0] = 0-objects[i][4][0]
+		for y in range(radboxh[0],radboxh[1]): 
+			if y not in range(res[1]):
+				objects[i][4][1] = 0-objects[i][4][1]
+		i+=1
 
 def Physics():
 	global objects
@@ -136,11 +163,13 @@ def Physics():
 		p+=1
 
 def main():
-	global screen, objects
+	global screen, objects, resx_ratio, resy_ratio
 	#newObject([res[0]/2,res[1]/2], 200)
 	while True:
 		screen.fill(black)
 		events = pygame.event.get
+		pygame.event.pump()
+		mousepos = pygame.mouse.get_pos()
 		
 		for event in events():
 			if event.type == QUIT:
@@ -150,30 +179,30 @@ def main():
 				if event.key == K_ESCAPE:
 						pygame.quit()
 						sys.exit()
+				if event.key == K_r:
+						try: 
+							del objects[-1]
+						except IndexError:
+							pass
 				elif event.key == K_SPACE:
-					pos = [random.randrange(int(res[0]*0.05), int(res[0]*0.95)), random.randrange(int(res[1]*0.05), int(res[1]*0.95))]
-					radius = random.randrange(3, 40)
+					#if mousepos in list_of_areas:
+					#pos = [random.randrange(int(res[0]*0.05), int(res[0]*0.95)), random.randrange(int(res[1]*0.05), int(res[1]*0.95))]
+					#radius = random.randrange(3, 40)
+					pos = [mousepos[0]*resx_ratio, mousepos[1]*resy_ratio]
+					radius = 50
 					newObject(pos, radius)
 		
 		if event.type == VIDEORESIZE:
-			res[0] = event.w
-			res[1]= event.h
+			tempresx = event.w
+			tempresy= event.h
 			screen = pygame.display.set_mode(res, RESIZABLE)
-		i = 0
-		while i < len(objects):
-			objects[i][0] = list(tuple(map(add, objects[i][0], objects[i][4])))
-			drawCircle(objects[i][0],objects[i][1],objects[i][3],objects[i][2])
-			radboxw = objects[i][0][0]+objects[i][1]
-			radboxh = objects[i][0][1]+objects[i][1]
-			if radboxw >= res[0] or radboxw <= 0:
-				objects[i][4][0] = 0-objects[i][4][0]
-			elif radboxh <= 20 or radboxh >= res[1]:
-				objects[i][4][1] = 0-objects[i][4][1]
-			i+=1
-		if objects != []:
-			objects[0][4]=[0,0]
-		pygame.event.pump()
-		mousepos = pygame.mouse.get_pos()
+			resx_ratio = res[0]/tempresx
+			resy_ratio = res[1]/tempresy
+			res[0], res[1] = tempresx, tempresy
+		
+		#if objects != []:
+		#	objects[0][4]=[0,0]
+		Box()
 		Physics()
 		pygame.display.update()
 		fpsClock.tick(FPS)
