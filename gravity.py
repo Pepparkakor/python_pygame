@@ -1,7 +1,9 @@
-###############################
-###### 2D gravity simulator ########
-######### press SPACE ###########
-################################
+###########################################################
+###### 2D gravity simulator ###################################
+######### SPACE - spawn new planet at mouse position ###########
+######### UP / DOWN - increase/decrease speed  of simulation#####
+######### g - toggle gravity ##################################
+##########################################################
 
 import numpy as np
 import random, string, math, time 
@@ -12,6 +14,8 @@ import os, sys
 
 pygame.init()
 FPS = 60
+c = 0
+density = 10
 infoObject = pygame.display.Info()
 tempresx = infoObject.current_w
 tempresy = infoObject.current_h
@@ -23,7 +27,7 @@ black = (0,0,0)
 objects = []
 font = pygame.font.Font(None, 36)
 img = ["images/earth.png","neptune.png"]
-earthimg = pygame.image.load(img[0]).convert_alpha()
+planetimg = pygame.image.load(img[0]).convert_alpha()
 resx_ratio = res[0]/tempresx
 resy_ratio = res[1]/tempresy
 
@@ -61,12 +65,12 @@ def newName():
 def drawCircle(pos, radius, color, name):
 	pos = (int(pos[0]),int(pos[1]))
 	circle = pygame.draw.circle(screen, color, pos, radius)
-	text = font.render(name, 25, (255, 255, 255))
-	text_rect = text.get_rect(center=(pos))
+	#text = font.render(name, 25, (255, 255, 255))
+	#text_rect = text.get_rect(center=(pos))
 	#screen.blit(text,text_rect)
-	#disp_earth = pygame.transform.scale(earthimg, (int(radius*2.7), int(radius*2.7)))
-	#earth_rect = disp_earth.get_rect(center=pos)
-	#screen.blit(disp_earth, earth_rect)
+	#disp_img = pygame.transform.scale(planetimg, (int(radius*2.7), int(radius*2.7)))
+	#img_rect = disp_img.get_rect(center=pos)
+	#screen.blit(disp_img, img_rect)
 
 def newObject(pos, radius):
 	name = newName()
@@ -86,7 +90,7 @@ def Distance(o1, o2):
 
 def vectorSum(vectors):
 	#format(from 0,0):[[1,2],[-1,3],[3,0]...]
-	vectorstack=[0]
+	vectorstack=[]
 	if vectors != []:
 		vectorstack = list(zip(*vectors))
 		vectorsum = [sum(vectorstack[0]), sum(vectorstack[1])]
@@ -97,20 +101,22 @@ def vectorSum(vectors):
 def Collision(o1, o2, distancevector, mass1, mass2):
 	global objects
 	if o1 != o2:
-		pos = [((1-o1[1])/(o1[1]+o2[1]))*distancevector[0] + o1[0][0],
-				((1-o1[1])/(o1[1]+o2[1]))*distancevector[1] + o1[0][1]]
+		pos = [((o2[1])/(o1[1]+o2[1]))*distancevector[0] + o1[0][0], ((o2[1])/(o1[1]+o2[1]))*distancevector[1] + o1[0][1]]
 		radius = o1[1] + o2[1]
 		name = o1[2] + o2[2]
-		color = white
+		color = [(o1[3][0]+o2[3][0])/2,(o1[3][1]+o2[3][1])/2,(o1[3][2]+o2[3][2])/2]
 		mass = mass1 + mass2
 		impulse1 = [mass1*o1[4][0], mass1*o1[4][1]]
 		impulse2 = [mass2*o2[4][0], mass2*o2[4][1]]
 		impulsesum = vectorSum([impulse1, impulse2])
-		velocity = [impulsesum[0]/mass, impulsesum[1]/mass]
-
+		try:
+			velocity = [(impulsesum[0]/mass*0.5), (impulsesum[1]/mass)*0.5]
+		except ZeroDivisionError:
+			velocity = [0,0]
 		objects[objects.index(o1)] = [pos, radius, name, color, velocity]
+		oj = objects[objects.index(o2)]
 		del objects[objects.index(o2)]
-		return True
+		return oj
 	else:
 		return False
 def Box():
@@ -128,42 +134,60 @@ def Box():
 			if y not in range(res[1]):
 				objects[i][4][1] = 0-objects[i][4][1]
 		i+=1
+def recursiveGravity(Objects):
+	global density, c
+
+	if c >= len(Objects):
+		doneWithLoop = True
+		c = 0
+	else:
+		z = 1
+		while z < len(Objects):
+			if z < len(Objects):
+				p = Objects[0]
+				pos1 = p[0]
+				radius1 = p[1]
+				velocity1 = p[4]
+				area1 = 3.1415*radius1**2
+				mass1 = area1*density
+				q = Objects[z]
+				pos2 = q[0]
+				radius2 = q[1]
+				velocity2 = q[4]
+				area2 = 3.1415*radius2**2
+				mass2 = area2*density
+				distancevector = Distance(p, q)
+				distance = math.hypot(distancevector[0], (distancevector[1]))
+				if distance <= p[1]+q[1]:
+					try: 
+						del Objects[Objects.index(Collision(p, q, distancevector, mass1, mass2))] 
+					except ValueError:
+						pass
+
+				else:
+					cos = distancevector[0]/distance
+					sin = distancevector[1]/distance
+					accer1 = (mass2/(distance**2))*(10**0)
+					accer2 = (mass1/(distance**2))*(10**0)
+					accervector1 = [cos*accer1, sin*accer1]
+					accervector2 = [-accervector1[0], -accervector1[1]]
+					try:
+						objects[objects.index(p)][4] = vectorSum([accervector1, objects[objects.index(p)][4]])
+					except ValueError:
+						pass
+					objects[z][4] = vectorSum([accervector2, objects[z][4]])
+					z+=1  
+
+		c+=1	
+		recursiveGravity(Objects[1:])
 
 def Physics():
 	global objects
-	density = 1
-	p = 0
-	while p < len(objects):
-		vectors = []
-		po = objects[p]
-		pos1 = po[0]
-		radius1 = po[1]
-		velocity1 = po[4]
-		area1 = 3.1415*radius1**2
-		mass1 = area1*density
-		for q in objects:
-			pos2 = q[0]
-			radius2 = q[1]
-			velocity2 = q[4]
-			area2 = 3.1415*radius2**2
-			mass2 = area2*density
-			distancevector = Distance(po, q)
-			distance = math.hypot(distancevector[0], (distancevector[1]))
-			if distance <= po[1]+q[1]:
-				if Collision(po, q, distancevector, mass1, mass2) == True:
-					pass
-			else:
-				cos = distancevector[0]/distance
-				sin = distancevector[1]/distance
-				accer = (mass2/(distance**2))*(10**0)
-				accervector = [cos*accer, sin*accer]
-				vectors.append(accervector)
-			vectorsum = vectorSum(vectors)
-			objects[p][4] = list(tuple(map(add, po[4], vectorsum)))
-		p+=1
+	if len(objects) >= 2:
+		recursiveGravity(objects)
 
 def main():
-	global screen, objects, resx_ratio, resy_ratio
+	global screen, objects, resx_ratio, resy_ratio, density, FPS
 	#newObject([res[0]/2,res[1]/2], 200)
 	while True:
 		screen.fill(black)
@@ -184,6 +208,11 @@ def main():
 							del objects[-1]
 						except IndexError:
 							pass
+				if event.key == K_g:
+					if density == 0:
+						density = 10
+					else:
+						density = 0
 				elif event.key == K_SPACE:
 					#if mousepos in list_of_areas:
 					#pos = [random.randrange(int(res[0]*0.05), int(res[0]*0.95)), random.randrange(int(res[1]*0.05), int(res[1]*0.95))]
@@ -191,7 +220,6 @@ def main():
 					pos = [mousepos[0]*resx_ratio, mousepos[1]*resy_ratio]
 					radius = 50
 					newObject(pos, radius)
-		
 		if event.type == VIDEORESIZE:
 			tempresx = event.w
 			tempresy= event.h
