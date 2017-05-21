@@ -1,9 +1,9 @@
-###########################################################
-###### 2D gravity simulator ###################################
-######### SPACE - spawn new planet at mouse position ###########
-######### UP / DOWN - increase/decrease speed  of simulation#####
-######### g - toggle gravity ##################################
-##########################################################
+################################################################
+###### 2D gravity simulator #####################################
+######### SPACE - spawn new planet at mouse position ############
+######### UP / DOWN - increase/decrease speed  of simulation(work in progress)#####
+######### g - toggle gravity ####################################
+################################################################
 
 import numpy as np
 import random, string, math, time 
@@ -119,6 +119,7 @@ def Collision(o1, o2, distancevector, mass1, mass2):
 		return oj
 	else:
 		return False
+		
 def Box():
 	global objects
 	i = 0
