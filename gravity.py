@@ -1,4 +1,5 @@
 #2D gravity simulator
+
 import numpy as np
 import random, string, math, time 
 from operator import add 
