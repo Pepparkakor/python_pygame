@@ -5,5 +5,5 @@ gravity.py usage:<br>
 ######### 2D gravity simulator #############################<br>
 ######### SPACE - spawn new planet at mouse position ##########<br>
 ######### UP / DOWN - increase/decrease speed  of simulation#####(<--work in progress)<br>
-######### g - toggle gravity ################################<br>
-########################################################<br>
+######### g - toggle gravity ###############################<br>
+######################################################<br>
