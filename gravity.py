@@ -11,23 +11,28 @@ from operator import add
 import pygame
 from pygame.locals import *
 import os, sys
+from urllib import request
+request.urlretrieve("http://icons.iconarchive.com/icons/paomedia/small-n-flat/1024/globe-icon.png", "earth.png")
+request.urlretrieve("https://vignette4.wikia.nocookie.net/vsbattles/images/c/ca/Render_sun.png/revision/latest?cb=20160310013337", "sun.png")
+request.urlretrieve("https://userscontent2.emaze.com/images/e24318fb-955f-4077-a9d0-195e1344c4f8/e2087feb2491620bcd0f3f885ebc5b4a.png", "dwarf.png")
 
 pygame.init()
 FPS = 60
 c = 0
-density = 10
+density = 0.3
 infoObject = pygame.display.Info()
 tempresx = infoObject.current_w
 tempresy = infoObject.current_h
 res = [1920, 1080]
 fpsClock = pygame.time.Clock()
 screen = pygame.display.set_mode(res, RESIZABLE)
+resized = False
 white = (255, 255, 255)
 black = (0,0,0)
 objects = []
 font = pygame.font.Font(None, 36)
-img = ["images/earth.png","neptune.png"]
-planetimg = pygame.image.load(img[0]).convert_alpha()
+
+img = [pygame.image.load("earth.png").convert_alpha(),pygame.image.load("sun.png").convert_alpha(),pygame.image.load("dwarf.png").convert_alpha()]
 resx_ratio = res[0]/tempresx
 resy_ratio = res[1]/tempresy
 
@@ -63,19 +68,26 @@ def newName():
 
 #actual engine starts here
 def drawCircle(pos, radius, color, name):
+	global img
 	pos = (int(pos[0]),int(pos[1]))
 	circle = pygame.draw.circle(screen, color, pos, radius)
 	#text = font.render(name, 25, (255, 255, 255))
 	#text_rect = text.get_rect(center=(pos))
 	#screen.blit(text,text_rect)
-	#disp_img = pygame.transform.scale(planetimg, (int(radius*2.7), int(radius*2.7)))
-	#img_rect = disp_img.get_rect(center=pos)
-	#screen.blit(disp_img, img_rect)
+	try:
+		disp_img = pygame.transform.scale(img[int(radius**2/30000)], (int(radius*2.5), int(radius*2.5)))
+		img_rect = disp_img.get_rect(center=pos)
+		screen.blit(disp_img, img_rect)
+	except IndexError:
+		pass
+
+	
+	
 
 def newObject(pos, radius):
 	name = newName()
 	color = (random.randrange(0, 255),random.randrange(0, 255),random.randrange(0, 255))
-	velocity = [0,0]
+	velocity = [3,0]
 	global objects
 	props = [pos, radius, name, color, velocity]
 	objects.append(props)
@@ -102,7 +114,7 @@ def Collision(o1, o2, distancevector, mass1, mass2):
 	global objects
 	if o1 != o2:
 		pos = [((o2[1])/(o1[1]+o2[1]))*distancevector[0] + o1[0][0], ((o2[1])/(o1[1]+o2[1]))*distancevector[1] + o1[0][1]]
-		radius = o1[1] + o2[1]
+		radius = int(math.sqrt(o1[1]**2+o2[1]**2))
 		name = o1[2] + o2[2]
 		color = [(o1[3][0]+o2[3][0])/2,(o1[3][1]+o2[3][1])/2,(o1[3][2]+o2[3][2])/2]
 		mass = mass1 + mass2
@@ -121,9 +133,12 @@ def Collision(o1, o2, distancevector, mass1, mass2):
 		return False
 		
 def Box():
-	global objects
+	global objects, resized
 	i = 0
 	while i < len(objects):
+		if resized == True:
+			objects[i][0] = [objects[i][0][0]*resx_ratio, objects[i][0][1]*resy_ratio]
+			resized = False
 		objects[i][0] = list(tuple(map(add, objects[i][0], objects[i][4])))
 		drawCircle(objects[i][0],objects[i][1],objects[i][3],objects[i][2])
 		radboxw = [int(objects[i][0][0]-objects[i][1]), int(objects[i][0][0]+objects[i][1])]
@@ -188,7 +203,7 @@ def Physics():
 		recursiveGravity(objects)
 
 def main():
-	global screen, objects, resx_ratio, resy_ratio, density, FPS
+	global screen, objects, resx_ratio, resy_ratio, density, FPS, resized
 	#newObject([res[0]/2,res[1]/2], 200)
 	while True:
 		screen.fill(black)
@@ -224,13 +239,14 @@ def main():
 		if event.type == VIDEORESIZE:
 			tempresx = event.w
 			tempresy= event.h
-			screen = pygame.display.set_mode(res, RESIZABLE)
-			resx_ratio = res[0]/tempresx
-			resy_ratio = res[1]/tempresy
+			#screen = pygame.display.set_mode(res, RESIZABLE)
+			resx_ratio = tempresx/res[0]
+			resy_ratio = tempresy/res[1]
 			res[0], res[1] = tempresx, tempresy
+			resized = True
 		
-		#if objects != []:
-		#	objects[0][4]=[0,0]
+		if objects != []:
+			objects[0][4]=[0,0]
 		Box()
 		Physics()
 		pygame.display.update()
